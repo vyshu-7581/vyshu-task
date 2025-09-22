@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Web App — Contact · Notes · To‑Do</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#2563eb}
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; margin:0;background:var(--bg);color:#0f172a}
+    .wrap{max-width:1000px;margin:32px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media (max-width:880px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    .nav{display:flex;gap:8px}
+    .btn{border:0;background:transparent;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .btn.primary{background:var(--accent);color:white}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text],input[type=email],textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef8;font-size:14px}
+    textarea{min-height:110px;resize:vertical}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:10px}
+    .todo-list,.notes-list{list-style:none;padding:0;margin:0}
+    .todo-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;border:1px solid #f0f4fb;margin-bottom:8px}
+    .pill{font-size:12px;padding:6px 8px;border-radius:999px;background:#f1f5f9}
+    .small{font-size:13px}
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Simple Web App<span class="muted"> — contact · notes · to‑do</span></h1>
+      <div class="nav">
+        <button class="btn" id="exportBtn">Export Data</button>
+        <button class="btn primary" id="clearBtn">Clear All</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- LEFT COLUMN -->
+      <section>
+        <div class="card" id="contactCard">
+          <h2 style="margin-top:0">Contact / Send Message</h2>
+          <p class="muted">This example doesn't send an email — it validates input and stores messages locally. Use it as a starting point for a real backend endpoint.</p>
+          <form id="contactForm">
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" placeholder="Your name" required />
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" required />
+            <label for="subject">Subject</label>
+            <input id="subject" name="subject" type="text" placeholder="Subject" />
+            <label for="message">Message</label>
+            <textarea id="message" name="message" placeholder="Write your message..." required></textarea>
+            <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+              <button class="btn primary" type="submit">Send</button>
+              <span id="contactStatus" class="muted small"></span>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin-top:0">Notes</h3>
+          <p class="muted">Quick notes stored in your browser.</p>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="noteInput" type="text" placeholder="New note" />
+            <button class="btn primary" id="addNoteBtn">Add</button>
+          </div>
+          <ul class="notes-list" id="notesList"></ul>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin-top:0">To‑Do</h3>
+          <p class="muted">Simple to‑do with complete/remove actions.</p>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="todoInput" type="text" placeholder="New to‑do" />
+            <button class="btn primary" id="addTodoBtn">Add</button>
+          </div>
+          <ul class="todo-list" id="todoList"></ul>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN -->
+      <aside>
+        <div class="card">
+          <h3 style="margin-top:0">Data Inspector</h3>
+          <p class="muted">View stored messages, notes and to‑dos.</p>
+          <div style="margin-top:10px">
+            <div class="small"><strong>Messages</strong></div>
+            <div id="messagesPreview" style="max-height:160px;overflow:auto;margin-top:8px"></div>
+            <hr style="margin:12px 0;border:none;border-top:1px solid #eef3fb"/>
+            <div class="small"><strong>Storage Usage</strong></div>
+            <div style="margin-top:8px"><span id="storageUsage" class="pill">—</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin-top:0">Tips</h3>
+          <ul style="padding-left:18px;color:var(--muted)">
+            <li>To send real emails, connect the form to a backend endpoint (Node, Python, PHP) or use a serverless function.</li>
+            <li>Data is saved to <code>localStorage</code> so it persists across reloads in the same browser.</li>
+            <li>Use this file as a starter — add authentication, API calls, or UX polish as needed.</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      Made with ❤️ — open the file in a browser to run. (No external build tools required.)
+    </footer>
+  </div>
+
+  <script>
+    // Simple client-side app state persisted to localStorage
+    const LS_KEY = 'simple-webapp:v1';
+
+    function readState(){
+      try{const raw=localStorage.getItem(LS_KEY);return raw?JSON.parse(raw):{messages:[],notes:[],todos:[]}}catch(e){return{messages:[],notes:[],todos:[]}}
+    }
+    function writeState(s){localStorage.setItem(LS_KEY,JSON.stringify(s));renderAll()}
+
+    // DOM refs
+    const contactForm=document.getElementById('contactForm');
+    const contactStatus=document.getElementById('contactStatus');
+    const messagesPreview=document.getElementById('messagesPreview');
+    const notesList=document.getElementById('notesList');
+    const noteInput=document.getElementById('noteInput');
+    const addNoteBtn=document.getElementById('addNoteBtn');
+    const todoInput=document.getElementById('todoInput');
+    const addTodoBtn=document.getElementById('addTodoBtn');
+    const todoList=document.getElementById('todoList');
+    const storageUsage=document.getElementById('storageUsage');
+    const exportBtn=document.getElementById('exportBtn');
+    const clearBtn=document.getElementById('clearBtn');
+
+    // initialize
+    let state = readState();
+    renderAll();
+
+    // Contact form: validate and store message
+    contactForm.addEventListener('submit', (ev)=>{
+      ev.preventDefault();
+      const form = new FormData(contactForm);
+      const name = form.get('name').trim();
+      const email = form.get('email').trim();
+      const subject = form.get('subject').trim();
+      const message = form.get('message').trim();
+      // basic validation
+      if(!name||!email||!message){contactStatus.textContent='Please fill required fields.';return}
+      // store
+      const msg = {id:Date.now(),name,email,subject,message,created:new Date().toISOString()};
+      state.messages.unshift(msg);
+      writeState(state);
+      contactForm.reset();
+      contactStatus.textContent='Message saved locally ✅';
+      setTimeout(()=>contactStatus.textContent='',2200);
+    });
+
+    // Notes
+    addNoteBtn.addEventListener('click', ()=>{
+      const text = noteInput.value.trim();
+      if(!text) return; state.notes.unshift({id:Date.now(),text}); noteInput.value=''; writeState(state);
+    });
+
+    // To‑do
+    addTodoBtn.addEventListener('click', ()=>{
+      const text=todoInput.value.trim(); if(!text) return; state.todos.unshift({id:Date.now(),text,done:false}); todoInput.value=''; writeState(state);
+    });
+
+    // export data
+    exportBtn.addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='simple-webapp-data.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // clear
+    clearBtn.addEventListener('click', ()=>{
+      if(!confirm('Clear all saved data?')) return; state={messages:[],notes:[],todos:[]}; writeState(state);
+    });
+
+    // rendering helpers
+    function renderAll(){
+      renderMessages(); renderNotes(); renderTodos(); updateStorageUsage();
+    }
+
+    function renderMessages(){
+      messagesPreview.innerHTML = state.messages.length? state.messages.map(m=>`<div style="padding:8px;border-bottom:1px solid #f3f7fb;margin-bottom:6px"><strong>${escapeHtml(m.name)}</strong> <span class="muted small">(${new Date(m.created).toLocaleString()})</span><div class="small" style="margin-top:6px">${escapeHtml(m.subject||'No subject')} — ${escapeHtml(m.message)}</div></div>`).join('') : '<div class="muted small">No messages yet.</div>';
+    }
+
+    function renderNotes(){
+      notesList.innerHTML=''; if(!state.notes.length){notesList.innerHTML='<li class="muted small">No notes yet.</li>';return}
+      state.notes.forEach(n=>{
+        const li=document.createElement('li'); li.className=''; li.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between"><div>${escapeHtml(n.text)}</div><div style="display:flex;gap:8px"><button class=\"btn\" data-action=\"del-note\" data-id=\"${n.id}\">Delete</button></div></div>`; notesList.appendChild(li);
+      });
+    }
+
+    notesList.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return; if(btn.dataset.action==='del-note'){
+        state.notes = state.notes.filter(n=>String(n.id)!==btn.dataset.id); writeState(state);
+      }
+    });
+
+    function renderTodos(){
+      todoList.innerHTML=''; if(!state.todos.length){todoList.innerHTML='<li class="muted small">No to‑dos yet.</li>';return}
+      state.todos.forEach(t=>{
+        const li=document.createElement('li'); li.className='todo-item';
+        li.innerHTML = `<label style="display:flex;gap:10px;align-items:center"><input type='checkbox' ${t.done? 'checked':''} data-action='toggle-todo' data-id='${t.id}' /> <span style='flex:1'>${escapeHtml(t.text)}</span></label><div style='display:flex;gap:8px'><button class='btn' data-action='del-todo' data-id='${t.id}'>Delete</button></div>`;
+        todoList.appendChild(li);
+      });
+    }
+
+    todoList.addEventListener('click', (e)=>{
+      const el = e.target.closest('[data-action]'); if(!el) return; const id = el.dataset.id; const action = el.dataset.action;
+      if(action==='del-todo'){ state.todos = state.todos.filter(t=>String(t.id)!==id); writeState(state); }
+      if(action==='toggle-todo'){ const t = state.todos.find(x=>String(x.id)===id); if(t) t.done = !t.done; writeState(state); }
+    });
+
+    // storage usage helper
+    function updateStorageUsage(){
+      try{
+        const raw = localStorage.getItem(LS_KEY)||''; storageUsage.textContent = raw.length? (raw.length+' bytes') : '0 bytes';
+      }catch(e){storageUsage.textContent='—'}
+    }
+
+    // small escape function to avoid simple injection in previews
+    function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  </script>
+</body>
+</html>
